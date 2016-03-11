@@ -1,0 +1,193 @@
+#!/bin/bash
+##################################################################################################################################
+# Description: This is a utility called setupfs. Setupfs is a tool that creates and observes file systems and backend storage.
+# The script accepts three arguments "-s", "-c", and "-l" and only accepts a single aurgument. 
+# Author:Rob Klotz
+# Created on 7/14/15
+# Parameters accepted at the command line
+#               -c <fs> <device> <directory>
+#               -l <fs>
+#               -s <device> <size>
+################################################################################################################################## 
+
+function help_me 
+{
+        echo
+        echo "Setupfs accepts the following command line flags. Only a single argument may be given."
+
+        echo
+
+        echo "-s <device> <size>"
+        echo " device - Basename of the block device. Created in /var/tmp"
+        echo " size - How many MB in the block device"
+
+        echo
+
+        echo "-c <fs> <device> <directory>"
+        echo " fs - Filesystem type. Valid ones are ext3,ext4,xfs or btrfs"
+        echo " device - Name of the device created by the -s option"
+        echo " directory - Where to mount the filesystem"
+
+        echo
+
+        echo "-l <fs>"
+        echo " fs - the filesystem type to display"
+        echo
+        exit 1 
+}
+
+function block_device_error
+{
+        echo
+        echo " We are unable to create the block device or the file does not exist"
+        echo " Please ensure sufficient disk space exists and that your usage is correct"
+        echo
+        help_me
+        exit 1
+}
+
+function file_exists
+{
+        echo
+        echo " The block device already exists, please choose a unique device name"
+        echo
+        help_me
+        exit 1
+}
+
+function source_dir_error
+{
+        echo
+        echo " We are unable to cd into the source directory. Please ensure it exists and has the proper permissions"
+        exit 1
+}
+
+function mount_error
+{
+        echo
+        echo " We are unable to create the mount point, Please investigate"
+        exit 1
+}
+
+function listing_error
+{
+        echo
+        echo "The filesystem you are looking for is invalid or does not exist. Please investigate"
+        echo
+        exit 1
+}
+
+# Check to see if any arguments are passed. Show help if nothing  is passed"
+#
+
+if [ -z "$1" ]; # Test to see if the first positional parameter is null. 
+        then
+                echo
+                help_me
+        fi
+
+arg1=$1
+source_dir='/var/tmp'
+
+   case $arg1 in
+
+        -s )  # Requires an option for the "device" and "size"
+                if [ $# -ne 3 ];
+                        then 
+                        echo "Check your usage"
+                        help_me
+                fi
+
+                dev_name=$2  # Assign $2 as the block device name
+                size=$3      # Assign $3 as the size 
+                cd $source_dir || source_dir_error
+
+                if [ -f $source_dir/$dev_name ]; # Check that the device name does not already exist, exit if it does
+                        then
+                                file_exists
+                fi
+
+                sudo dd if=/dev/zero of=$dev_name bs=1M count=$size || block_device_error
+        ;;
+
+        -c )  # Requires an option for filesystem, device and directory
+                
+                if [ $# -ne 4 ];
+                        then
+                        echo "Check your usage"
+                        help_me
+                fi
+
+                cd $source_dir || source_dir_error
+                file_system=$2
+                dev_name=$3
+                mount_point=$4
+
+                if [ ! -f $source_dir/$dev_name ]  # Test that the block device exists, exit if it does not
+
+                        then
+                        block_device_error
+                fi
+
+                if [ ! -d $mount_point ] # Test to see if the mount point exists, create if it does not
+
+                        then
+
+                        sudo mkdir $mount_point || mount_error
+
+                fi
+                        case $file_system in
+
+                                ext3)    sudo /sbin/mkfs -F -t $file_system -q $source_dir/$dev_name || filesystem_error
+                                         sudo mount $source_dir/$dev_name $mount_point || mount_error
+                                ;;
+
+                                ext4) sudo /sbin/mkfs -F -t $file_system -q $source_dir/$dev_name || filesystem_error
+                                      sudo mount $source_dir/$dev_name $mount_point || mount_error
+                                ;;
+
+                                xfs) sudo /sbin/mkfs -F -t $file_system -q $source_dir/$dev_name || filesystem_error
+                                      sudo mount $source_dir/$dev_name $mount_point || mount_error
+                                ;;
+                                btrfs) sudo /sbin/mkfs -F -t $file_system -q $source_dir/$dev_name || filesystem_error
+                                      sudo mount $source_dir/$dev_name $mount_point || mount_error
+                                ;;
+                                *) echo "Invalid option" && help_me
+                                ;;
+                        esac
+        ;;
+
+        -l )  # list the specific filesystems
+
+                if [ $# -ne 2 ]
+                        then
+                echo "Check your usage" && help_me
+
+                fi
+
+                file_system=$2
+
+                        case $file_system in
+
+                                ext3)   findmnt -t $file_system || listing_error
+                                ;;
+                                ext4) findmnt -t $file_system || listing_error
+                                ;;
+                                xfs) findmnt -t $file_system || listing_error
+                                ;;
+                                btrfs) findmnt -t $file_system || listing_error
+                                ;;
+                                *) echo "Invalid filesystem, check the usage below" && help_me
+                                ;;
+                        esac
+
+        ;;
+
+        *) 
+        echo "Invalid option, please see the usage below"
+        echo
+        help_me
+        echo
+        ;;
+   esac
+exit 0
