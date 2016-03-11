@@ -1,4 +1,3 @@
-# scripts
 Miscellaneous Scripts
 
 This repository contains miscellanous scripts that I have worked on over the years. Some of them were built at the ISE while others were 
