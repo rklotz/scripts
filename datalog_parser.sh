@@ -1,6 +1,5 @@
 #!/bin/ksh
 #
-# Created on 11/2/2011 by Rob Klotz
 # This script will be used to parse the RMM Receiver information in the /opt/gts/var/log/datalog file
 # and will generate alerts based upon the folling criteria
 # 1) If the allocated recvbuffer reaches 70% of the Max allowed
